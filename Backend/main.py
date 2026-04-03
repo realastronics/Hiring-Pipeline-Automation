@@ -1,9 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Backend.routers import mailer
-from routers import screen
-from routers import screen, candidates
-from routers import screen, candidates
+from routers import mailer
 from routers import screen, candidates, schedule
 
 app = FastAPI(title="Hiring Tool API")
