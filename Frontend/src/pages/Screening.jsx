@@ -7,21 +7,30 @@ const API = 'http://localhost:8000'
 export default function Screening() {
   const { jobId } = useParams()
   const navigate = useNavigate()
+  const [mode, setMode] = useState('upload')
   const [jdText, setJdText] = useState('')
   const [resumes, setResumes] = useState([])
+  const [sheetId, setSheetId] = useState('')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
 
   async function runScreening() {
-    if (!jdText || resumes.length === 0) return
+    if (!jdText) return
+    if (mode === 'upload' && resumes.length === 0) return
     setLoading(true)
     try {
       const form = new FormData()
       form.append('job_id', jobId)
       form.append('jd_text', jdText)
-      resumes.forEach(f => form.append('resumes', f))
 
-      const res = await axios.post(`${API}/screen/`, form)
+      let res
+      if (mode === 'upload') {
+        resumes.forEach(f => form.append('resumes', f))
+        res = await axios.post(`${API}/screen/`, form)
+      } else {
+        form.append('sheet_id', sheetId)
+        res = await axios.post(`${API}/screen/from-sheet`, form)
+      }
       setResults(res.data)
     } catch (e) {
       alert('Screening failed: ' + e.message)
@@ -36,6 +45,22 @@ export default function Screening() {
 
       {!results ? (
         <div style={{ background: '#fff', borderRadius: 12, padding: 32, border: '1px solid #e8e8e8' }}>
+
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            <button
+              style={mode === 'upload' ? primaryBtn : secondaryBtn}
+              onClick={() => setMode('upload')}>
+              Manual Upload
+            </button>
+            <button
+              style={mode === 'sheet' ? primaryBtn : secondaryBtn}
+              onClick={() => setMode('sheet')}>
+              From Google Form
+            </button>
+          </div>
+
+          {/* JD input — always shown */}
           <label style={labelStyle}>Job Description</label>
           <textarea
             style={{ ...inputStyle, height: 160, resize: 'vertical' }}
@@ -44,22 +69,40 @@ export default function Screening() {
             onChange={e => setJdText(e.target.value)}
           />
 
-          <label style={labelStyle}>Upload Resumes (PDF)</label>
-          <input
-            type="file"
-            multiple
-            accept=".pdf"
-            style={{ marginBottom: 24 }}
-            onChange={e => setResumes(Array.from(e.target.files))}
-          />
-          {resumes.length > 0 && (
-            <p style={{ color: '#666', fontSize: 14, marginBottom: 16 }}>
-              {resumes.length} file(s) selected
-            </p>
+          {/* Conditional input based on mode */}
+          {mode === 'upload' ? (
+            <div>
+              <label style={labelStyle}>Upload Resumes (PDF)</label>
+              <input
+                type="file"
+                multiple
+                accept=".pdf"
+                style={{ marginBottom: 24 }}
+                onChange={e => setResumes(Array.from(e.target.files))}
+              />
+              {resumes.length > 0 && (
+                <p style={{ color: '#666', fontSize: 14, marginBottom: 16 }}>
+                  {resumes.length} file(s) selected
+                </p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label style={labelStyle}>Google Sheet ID</label>
+              <input
+                style={inputStyle}
+                placeholder="Paste the Sheet ID from the URL"
+                value={sheetId}
+                onChange={e => setSheetId(e.target.value)}
+              />
+              <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
+                Make sure the sheet has columns: Full Name, Email, Resume
+              </p>
+            </div>
           )}
 
-          <button style={btnStyle} onClick={runScreening} disabled={loading}>
-            {loading ? 'Screening...' : `▶ Run AI Screening`}
+          <button style={primaryBtn} onClick={runScreening} disabled={loading}>
+            {loading ? 'Screening...' : '▶ Run AI Screening'}
           </button>
         </div>
       ) : (
@@ -74,7 +117,8 @@ export default function Screening() {
             <CandidateCard key={i} candidate={r} />
           ))}
 
-          <button style={{ ...btnStyle, marginTop: 24 }} onClick={() => navigate(`/candidates/${jobId}`)}>
+          <button style={{ ...primaryBtn, width: '100%', marginTop: 24 }}
+            onClick={() => navigate(`/candidates/${jobId}`)}>
             Go to Outreach →
           </button>
         </div>
@@ -117,5 +161,6 @@ function CandidateCard({ candidate: c }) {
 }
 
 const labelStyle = { display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#444' }
-const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15, marginBottom: 20, outline: 'none' }
-const btnStyle = { width: '100%', padding: 12, borderRadius: 8, background: '#1a1a1a', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600 }
+const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15, marginBottom: 20, outline: 'none', fontFamily: 'inherit' }
+const primaryBtn = { padding: '11px 20px', borderRadius: 8, background: '#1a1a1a', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
+const secondaryBtn = { padding: '11px 20px', borderRadius: 8, background: '#f5f5f5', color: '#1a1a1a', border: '1px solid #ddd', fontSize: 15, fontWeight: 600, cursor: 'pointer' }

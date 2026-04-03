@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
 const API = 'http://localhost:8000'
 
 export default function Candidates() {
   const { jobId } = useParams()
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [formLink, setFormLink] = useState('')
   const [jobTitle, setJobTitle] = useState('')
@@ -95,6 +96,12 @@ export default function Candidates() {
           Send Rejections
         </button>
       </div>
+
+      <button
+        style={{ ...btnStyle('#059669'), marginTop: 12, width: '100%' }}
+        onClick={() => navigate(`/schedule/${jobId}`)}>
+        Go to Scheduling →
+      </button>
     </div>
   )
 }

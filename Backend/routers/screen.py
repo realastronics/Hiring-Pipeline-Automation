@@ -8,11 +8,77 @@ from groq import Groq
 from database import supabase
 from dotenv import load_dotenv
 from pathlib import Path
+import gspread 
+from google.oauth2.service_account import Credentials as SACredentials
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 router = APIRouter(prefix="/screen", tags=["Screening"])
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+@router.post("/from-sheet")
+async def screen_from_sheet(job_id: str = Form(...), jd_text: str = Form(...)):
+    sa_info = json.loads(os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"))
+    creds = SACredentials.from_service_account_info(
+        sa_info,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+    gc = gspread.authorize(creds)
+    sheet_id = os.getenv("GOOGLE_SHEET_ID")
+    sheet = gc.open_by_key(sheet_id).sheet1
+    rows = sheet.get_all_records()
+
+    results = []
+    for row in rows:
+        candidate_name = row.get("Full Name", "").strip()
+        candidate_email = row.get("Email", "").strip()
+        resume_url = row.get("Resume", "").strip()
+
+        if not candidate_name or not candidate_email:
+            continue
+
+        # Download resume from Drive
+        file_id = resume_url.split("/d/")[1].split("/")[0]
+        import requests as req
+        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        headers = {"Authorization": f"Bearer {creds.token}"}
+        response = req.get(download_url, headers=headers)
+        resume_text = extract_text_from_pdf(response.content)
+
+        ai_result = screen_resume(candidate_name, resume_text, jd_text)
+
+        fit_map = {"Strong Fit": "strong", "Moderate Fit": "moderate", "Not Fit": "not_fit"}
+
+        candidate = supabase.table("candidates").upsert({
+            "name": candidate_name,
+            "email": candidate_email
+        }, on_conflict="email").execute()
+
+        candidate_id = candidate.data[0]["id"]
+
+        application = supabase.table("applications").insert({
+            "job_id": job_id,
+            "candidate_id": candidate_id,
+            "fit_category": fit_map.get(ai_result["recommendation"], "not_fit"),
+            "ai_score": ai_result["score"],
+            "ai_reasoning": ai_result["reasoning"],
+            "stage": "screened"
+        }).execute()
+
+        results.append({
+            "candidate_name": candidate_name,
+            "application_id": application.data[0]["id"],
+            **ai_result
+        })
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    for i, r in enumerate(results):
+        r["rank"] = i + 1
+
+    return {"job_id": job_id, "total": len(results), "results": results}
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
