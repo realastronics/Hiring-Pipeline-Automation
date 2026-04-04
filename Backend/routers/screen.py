@@ -179,7 +179,9 @@ async def screen_from_sheet(job_id: str = Form(...), jd_text: str = Form(...)):
     gc = gspread.authorize(creds)
 
     sheet_id = os.getenv("GOOGLE_SHEET_ID")
-    sheet = gc.open_by_key(sheet_id).sheet1
+    spreadsheet = gc.open_by_key(sheet_id)
+    print(f"Available tabs: {[ws.title for ws in spreadsheet.worksheets()]}")
+    sheet = spreadsheet.worksheet("Form_Responses")
     rows = sheet.get_all_records()
 
     print(f"Total rows found: {len(rows)}")

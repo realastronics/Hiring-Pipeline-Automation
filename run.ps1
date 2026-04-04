@@ -1,0 +1,2 @@
+Start-Process powershell -ArgumentList '-NoExit', '-Command', '& "C:\Envs\hiring-pipeline\Scripts\Activate.ps1"; cd Backend; uvicorn main:app --reload'
+Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd Frontend; npm run dev'
