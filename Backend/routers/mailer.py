@@ -60,7 +60,8 @@ def send_invites(req: SendInviteRequest):
         subject = f"Interview Invitation – {req.job_title}"
         body = f"""Dear {target.name},
 
-Congratulations! You have been shortlisted for the {req.job_title} position.
+Congratulations dear applicant! We are pleased to announce that you have been shorlisted 
+for the interivew round of {req.job_title} position.
 
 Please share your availability using the link below — kindly respond within 48 hours:
 {req.form_link}
