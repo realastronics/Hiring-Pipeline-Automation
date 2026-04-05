@@ -1,18 +1,19 @@
 from fastapi import APIRouter, UploadFile, File, Form
 from typing import List
-import PyPDF2
+import PyPDF2 # this is to read pdf files in python
 import tempfile
 import os
 import json
 import io
-from groq import Groq
-from database import supabase
+from groq import Groq # groq's free tier llma 3.3 (70B parameters) has been used for comparing resumes
+from database import supabase # supabase has been used for data management
 from dotenv import load_dotenv
 from pathlib import Path
 import gspread
 from google.oauth2.service_account import Credentials as SACredentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+import asyncio # this is for batching of the groq API requests, adding this soon
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
