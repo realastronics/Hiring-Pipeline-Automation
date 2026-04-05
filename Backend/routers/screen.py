@@ -180,21 +180,60 @@ async def screen_from_sheet(job_id: str = Form(...), jd_text: str = Form(...)):
 
     sheet_id = os.getenv("GOOGLE_SHEET_ID")
     spreadsheet = gc.open_by_key(sheet_id)
-    print(f"Available tabs: {[ws.title for ws in spreadsheet.worksheets()]}")
-    sheet = spreadsheet.worksheet("Form_Responses")
+    
+    # Always use first tab regardless of name
+    sheet = spreadsheet.get_worksheet(0)
     rows = sheet.get_all_records()
 
     print(f"Total rows found: {len(rows)}")
+    if rows:
+        print(f"Columns detected: {list(rows[0].keys())}")
 
     results = []
 
     for row in rows:
-        candidate_name = row.get("Your full name", "").strip()
-        candidate_email = row.get("Primary Email Address", "").strip()
-        resume_url = row.get("Resume", "").strip()
+        # ── Smart column detection ─────────────────────────
+        # Find name column — look for any key containing 'name'
+        candidate_name = ""
+        for key in row:
+            if "name" in key.lower():
+                candidate_name = str(row[key]).strip()
+                if candidate_name:
+                    break
+
+        # Find email column — look for any key containing 'email'
+        # Prefer 'primary' email if multiple exist
+        candidate_email = ""
+        primary_email_key = None
+        fallback_email_key = None
+        for key in row:
+            if "email" in key.lower():
+                if "primary" in key.lower():
+                    primary_email_key = key
+                else:
+                    fallback_email_key = key
+        
+        if primary_email_key:
+            candidate_email = str(row[primary_email_key]).strip()
+        elif fallback_email_key:
+            candidate_email = str(row[fallback_email_key]).strip()
+
+        # Find resume/drive link column
+        # Look for keys containing 'resume', 'cv', 'drive', 'link', 'file'
+        resume_url = ""
+        resume_keywords = ["resume", "cv", "drive", "link", "file", "upload"]
+        for key in row:
+            key_lower = key.lower()
+            if any(keyword in key_lower for keyword in resume_keywords):
+                val = str(row[key]).strip()
+                if val.startswith("http") and "drive.google.com" in val:
+                    resume_url = val
+                    break
+
+        print(f"Detected — Name: {candidate_name} | Email: {candidate_email} | Resume URL: {resume_url[:50] if resume_url else 'NOT FOUND'}")
 
         if not candidate_name or not candidate_email or not resume_url:
-            print(f"Skipping incomplete row: {row}")
+            print(f"Skipping incomplete row")
             continue
 
         file_id = parse_file_id(resume_url)
@@ -216,7 +255,20 @@ async def screen_from_sheet(job_id: str = Form(...), jd_text: str = Form(...)):
             print(f"Empty resume text for {candidate_name}")
             continue
 
-        ai_result = screen_resume(candidate_name, resume_text, jd_text)
+        # Pass any extra columns as supplementary context to AI
+        extra_context = ""
+        skip_keys = {"timestamp", "name", "email", "resume", "cv", "drive", "link", "file", "upload"}
+        for key in row:
+            if not any(skip in key.lower() for skip in skip_keys):
+                val = str(row[key]).strip()
+                if val:
+                    extra_context += f"\n{key}: {val}"
+
+        enhanced_jd = jd_text
+        if extra_context:
+            enhanced_jd += f"\n\nAdditional candidate information:{extra_context}"
+
+        ai_result = screen_resume(candidate_name, resume_text, enhanced_jd)
         application = save_to_db(candidate_name, candidate_email, job_id, ai_result)
 
         results.append({

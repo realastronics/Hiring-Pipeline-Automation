@@ -1,0 +1,17 @@
+SDE Intern – Astronics
+
+Location: Gurgaon (Hybrid)
+Duration: 3–6 Months
+
+Role Summary
+
+Seeking 3rd-year engineering students to assist in developing and maintaining web-based applications.
+
+Key Skills
+Strong fundamentals in Data Structures & Algorithms
+Proficiency in Python / Java / C++ / JavaScript
+Basic understanding of web development and REST APIs
+Familiarity with Git
+Preferred
+Experience with any framework (React, Node.js, FastAPI, Django)
+Project work (GitHub/portfolio)
