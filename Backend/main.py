@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import mailer
 from routers import screen, candidates, mailer, schedule, jobs, auth
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv(Path(__file__).parent / ".env")
+import os
+
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = os.getenv("OAUTHLIB_INSECURE_TRANSPORT", "0")
 
 app = FastAPI(title="Hiring Tool API")
 app.include_router(screen.router)
