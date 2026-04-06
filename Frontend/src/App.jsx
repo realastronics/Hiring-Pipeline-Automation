@@ -9,21 +9,20 @@ import Schedule from './pages/Schedule'
 function App() {
   const [user, setUser] = useState(null)
 
-  useEffect(() => {
-    // Check URL params for user after OAuth callback
+useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const emailFromCallback = params.get('user')
+    
     if (emailFromCallback) {
-      localStorage.setItem('user_email', emailFromCallback)
-      setUser(emailFromCallback)
-      // Clean URL
-      window.history.replaceState({}, '', window.location.pathname)
+        localStorage.setItem('user_email', emailFromCallback)
+        window.history.replaceState({}, '', window.location.pathname)
+        // Use a timeout to avoid the synchronous setState warning
+        setTimeout(() => setUser(emailFromCallback), 0)
     } else {
-      // Check localStorage
-      const stored = localStorage.getItem('user_email')
-      if (stored) setUser(stored)
+        const stored = localStorage.getItem('user_email')
+        if (stored) setUser(stored)
     }
-  }, [])
+}, [])
 
   return (
     <BrowserRouter>
