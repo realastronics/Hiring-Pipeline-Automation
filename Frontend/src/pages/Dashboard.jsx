@@ -4,12 +4,14 @@ import axios from 'axios'
 
 const API = 'http://localhost:8000'
 
-export default function Dashboard() {
+export default function Dashboard({ user, logout }) {
+  console.log('Dashboard user:', user)
   const [jobTitle, setJobTitle] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [jobId, setJobId] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  
 
   async function createJob() {
     if (!jobTitle || !companyName) return
