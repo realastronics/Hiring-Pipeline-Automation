@@ -30,16 +30,6 @@ def get_job(job_id: str):
     result = supabase.table("jobs").select("*").eq("id", job_id).execute()
     return result.data[0]
 
-@router.get("/company/{company_id}")
-def get_jobs_by_company(company_id: str):
-    result = supabase.table("jobs")\
-        .select("*")\
-        .eq("company_id", company_id)\
-        .eq("status", "active")\
-        .order("created_at", desc=True)\
-        .execute()
-    return result.data
-
 @router.get("/{job_id}/stats")
 def get_job_stats(job_id: str):
     result = supabase.table("applications")\
@@ -56,3 +46,13 @@ def get_job_stats(job_id: str):
         "invited": sum(1 for r in data if r["stage"] == "invited"),
         "scheduled": sum(1 for r in data if r["stage"] == "scheduled")
     }
+
+@router.get("/company/{company_id}")
+def get_jobs_by_company(company_id: str):
+    result = supabase.table("jobs")\
+        .select("*")\
+        .eq("company_id", company_id)\
+        .eq("status", "active")\
+        .order("created_at", desc=True)\
+        .execute()
+    return result.data
