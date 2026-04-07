@@ -29,3 +29,30 @@ def create_job(req: JobCreate):
 def get_job(job_id: str):
     result = supabase.table("jobs").select("*").eq("id", job_id).execute()
     return result.data[0]
+
+@router.get("/company/{company_id}")
+def get_jobs_by_company(company_id: str):
+    result = supabase.table("jobs")\
+        .select("*")\
+        .eq("company_id", company_id)\
+        .eq("status", "active")\
+        .order("created_at", desc=True)\
+        .execute()
+    return result.data
+
+@router.get("/{job_id}/stats")
+def get_job_stats(job_id: str):
+    result = supabase.table("applications")\
+        .select("fit_category, stage")\
+        .eq("job_id", job_id)\
+        .execute()
+    
+    data = result.data
+    return {
+        "total": len(data),
+        "strong": sum(1 for r in data if r["fit_category"] == "strong"),
+        "moderate": sum(1 for r in data if r["fit_category"] == "moderate"),
+        "not_fit": sum(1 for r in data if r["fit_category"] == "not_fit"),
+        "invited": sum(1 for r in data if r["stage"] == "invited"),
+        "scheduled": sum(1 for r in data if r["stage"] == "scheduled")
+    }
