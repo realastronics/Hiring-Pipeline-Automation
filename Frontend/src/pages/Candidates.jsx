@@ -4,7 +4,7 @@ import axios from 'axios'
 
 const API = 'http://localhost:8000'
 
-export default function Candidates() {
+export default function Candidates({ user }) {
   const { jobId } = useParams()
   const navigate = useNavigate()
   const [data, setData] = useState(null)
@@ -37,7 +37,8 @@ export default function Candidates() {
           email: c.email
         })),
         form_link: formLink,
-        job_title: jobTitle
+        job_title: jobTitle,
+        user_email: user
       })
       setMessage(`✓ Invites sent to ${targets.length} candidates`)
     } catch (e) {
@@ -56,7 +57,8 @@ export default function Candidates() {
           name: c.name,
           email: c.email
         })),
-        job_title: jobTitle
+        job_title: jobTitle,
+        user_email: user
       })
       setMessage(`✓ Rejections sent to ${data.not_fit.length} candidates`)
     } catch (e) {
@@ -73,10 +75,11 @@ export default function Candidates() {
 
       <div style={{ background: '#fff', borderRadius: 12, padding: 24, border: '1px solid #e8e8e8', marginBottom: 24 }}>
         <label style={labelStyle}>Job title (for email)</label>
-        <input style={inputStyle} placeholder="e.g. Backend Engineer Intern" value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
-
+        <input style={inputStyle} placeholder="e.g. Backend Engineer Intern"
+          value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
         <label style={labelStyle}>Availability form link</label>
-        <input style={inputStyle} placeholder="https://forms.gle/..." value={formLink} onChange={e => setFormLink(e.target.value)} />
+        <input style={inputStyle} placeholder="https://forms.gle/..."
+          value={formLink} onChange={e => setFormLink(e.target.value)} />
       </div>
 
       <Section title="Strong Fit" candidates={data.strong} color="#16a34a" bg="#f0fdf4" />
@@ -97,8 +100,7 @@ export default function Candidates() {
         </button>
       </div>
 
-      <button
-        style={{ ...btnStyle('#059669'), marginTop: 12, width: '100%' }}
+      <button style={{ ...btnStyle('#059669'), marginTop: 12, width: '100%' }}
         onClick={() => navigate(`/schedule/${jobId}`)}>
         Go to Scheduling →
       </button>
@@ -110,7 +112,9 @@ function Section({ title, candidates, color, bg }) {
   if (!candidates?.length) return null
   return (
     <div style={{ marginBottom: 20 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 600, color, marginBottom: 10 }}>{title} ({candidates.length})</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 600, color, marginBottom: 10 }}>
+        {title} ({candidates.length})
+      </h3>
       {candidates.map((c, i) => (
         <div key={i} style={{ background: bg, borderRadius: 8, padding: '10px 14px', marginBottom: 8, fontSize: 14 }}>
           <strong>{c.name}</strong> — {c.email}

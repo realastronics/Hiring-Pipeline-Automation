@@ -4,6 +4,7 @@ import axios from 'axios'
 
 const API = 'http://localhost:8000'
 
+// eslint-disable-next-line no-unused-vars
 export default function Dashboard({ user, logout }) {
   console.log('Dashboard user:', user)
   const [jobTitle, setJobTitle] = useState('')
