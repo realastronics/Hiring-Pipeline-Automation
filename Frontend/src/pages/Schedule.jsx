@@ -4,7 +4,7 @@ import axios from 'axios'
 
 const API = 'http://localhost:8000'
 
-export default function Schedule() {
+export default function Schedule({ user }) {
   const { jobId } = useParams()
   const [slots, setSlots] = useState([{ interviewer_name: '', interviewer_email: '', slot_datetime: '' }])
   const [schedule, setSchedule] = useState(null)
@@ -15,7 +15,7 @@ export default function Schedule() {
     setLoading(true)
     try {
       await axios.post(`${API}/schedule/slots`, { job_id: jobId, slots })
-      setMessage('✓ Slots added successfully')
+      setMessage('✓ Slots saved')
     } catch (e) {
       setMessage('Failed: ' + e.message)
     }
@@ -24,9 +24,16 @@ export default function Schedule() {
 
   async function matchAndBook() {
     setLoading(true)
+    setMessage('')
     try {
-      const res = await axios.post(`${API}/schedule/match`, { job_id: jobId })
+      const res = await axios.post(`${API}/schedule/match`, {
+        job_id: jobId,
+        user_email: user
+      })
       setSchedule(res.data)
+      if (res.data.error) {
+        setMessage(`Error: ${res.data.error}`)
+      }
     } catch (e) {
       setMessage('Failed: ' + e.message)
     }
@@ -48,40 +55,27 @@ export default function Schedule() {
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Interview Scheduling</h1>
       <p style={{ color: '#888', marginBottom: 32 }}>Job ID: {jobId}</p>
 
-      {/* Slot input */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 20 }}>Interviewer Availability</h2>
         {slots.map((slot, i) => (
           <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-            <input
-              style={inputStyle}
-              placeholder="Interviewer name"
+            <input style={inputStyle} placeholder="Interviewer name"
               value={slot.interviewer_name}
-              onChange={e => updateSlot(i, 'interviewer_name', e.target.value)}
-            />
-            <input
-              style={inputStyle}
-              placeholder="interviewer@email.com"
+              onChange={e => updateSlot(i, 'interviewer_name', e.target.value)} />
+            <input style={inputStyle} placeholder="interviewer@email.com"
               value={slot.interviewer_email}
-              onChange={e => updateSlot(i, 'interviewer_email', e.target.value)}
-            />
-            <input
-              style={inputStyle}
-              type="datetime-local"
+              onChange={e => updateSlot(i, 'interviewer_email', e.target.value)} />
+            <input style={inputStyle} type="datetime-local"
               value={slot.slot_datetime}
-              onChange={e => updateSlot(i, 'slot_datetime', e.target.value)}
-            />
+              onChange={e => updateSlot(i, 'slot_datetime', e.target.value)} />
           </div>
         ))}
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           <button style={secondaryBtn} onClick={addSlotRow}>+ Add Row</button>
-          <button style={primaryBtn} onClick={addSlots} disabled={loading}>
-            Save Slots
-          </button>
+          <button style={primaryBtn} onClick={addSlots} disabled={loading}>Save Slots</button>
         </div>
       </div>
 
-      {/* Match and book */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>Auto-Match & Book</h2>
         <p style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
@@ -93,11 +87,12 @@ export default function Schedule() {
       </div>
 
       {message && (
-        <p style={{ color: '#16a34a', fontWeight: 500, marginBottom: 16 }}>{message}</p>
+        <p style={{ color: message.startsWith('Error') ? '#dc2626' : '#16a34a', fontWeight: 500, marginBottom: 16 }}>
+          {message}
+        </p>
       )}
 
-      {/* Results */}
-      {schedule && (
+      {schedule && !schedule.error && (
         <div style={cardStyle}>
           <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16 }}>
             Booked ({schedule.booked?.length || 0})
@@ -106,7 +101,9 @@ export default function Schedule() {
             <div key={i} style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: 8, marginBottom: 8 }}>
               <strong>{b.candidate}</strong> — {b.interviewer}
               <br />
-              <span style={{ fontSize: 13, color: '#666' }}>{b.slot}</span>
+              <span style={{ fontSize: 13, color: '#666' }}>
+                {new Date(b.slot).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+              </span>
               {b.calendar_link && (
                 <a href={b.calendar_link} target="_blank" rel="noreferrer"
                   style={{ float: 'right', fontSize: 13, color: '#16a34a' }}>
@@ -115,7 +112,6 @@ export default function Schedule() {
               )}
             </div>
           ))}
-
           {schedule.failed?.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <h3 style={{ fontSize: 15, color: '#dc2626', marginBottom: 8 }}>
@@ -136,5 +132,5 @@ export default function Schedule() {
 
 const cardStyle = { background: '#fff', borderRadius: 12, padding: 24, border: '1px solid #e8e8e8', marginBottom: 20 }
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, outline: 'none', fontFamily: 'inherit' }
-const primaryBtn = { padding: '11px 20px', borderRadius: 8, background: '#1a1a1a', color: '#fff', border: 'none', fontSize: 14, fontWeight: 600 }
-const secondaryBtn = { padding: '11px 20px', borderRadius: 8, background: '#f5f5f5', color: '#1a1a1a', border: '1px solid #ddd', fontSize: 14, fontWeight: 600 }
+const primaryBtn = { padding: '11px 20px', borderRadius: 8, background: '#1a1a1a', color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+const secondaryBtn = { padding: '11px 20px', borderRadius: 8, background: '#f5f5f5', color: '#1a1a1a', border: '1px solid #ddd', fontSize: 14, fontWeight: 600, cursor: 'pointer' }

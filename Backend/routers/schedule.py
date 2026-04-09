@@ -2,29 +2,15 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List
 from database import supabase
-from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 import os
-import json
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 router = APIRouter(prefix="/schedule", tags=["Scheduling"])
-
-# ── Google Calendar setup ────────────────────────────────
-
-def get_calendar_service():
-    sa_info = json.loads(os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"))
-    creds = Credentials.from_service_account_info(
-        sa_info,
-        scopes=["https://www.googleapis.com/auth/calendar"]
-    )
-    return build("calendar", "v3", credentials=creds)
-
-# ── Pydantic models ──────────────────────────────────────
 
 class SlotInput(BaseModel):
     interviewer_name: str
@@ -37,8 +23,7 @@ class AddSlotsRequest(BaseModel):
 
 class BookInterviewsRequest(BaseModel):
     job_id: str
-
-# ── Endpoints ────────────────────────────────────────────
+    user_email: str
 
 @router.post("/slots")
 def add_interviewer_slots(req: AddSlotsRequest):
@@ -57,14 +42,14 @@ def add_interviewer_slots(req: AddSlotsRequest):
 
 @router.post("/match")
 def match_and_book(req: BookInterviewsRequest):
-    # Get all invited candidates for this job
+    from routers.auth import get_user_credentials
+    
     applications = supabase.table("applications")\
         .select("*, candidates(name, email)")\
         .eq("job_id", req.job_id)\
         .eq("stage", "invited")\
         .execute()
 
-    # Get all available slots for this job
     slots = supabase.table("interview_slots")\
         .select("*")\
         .eq("job_id", req.job_id)\
@@ -72,12 +57,17 @@ def match_and_book(req: BookInterviewsRequest):
         .execute()
 
     if not slots.data:
-        return {"error": "No available slots"}
+        return {"error": "No available slots — add interviewer slots first"}
 
     if not applications.data:
-        return {"error": "No invited candidates found"}
+        return {"error": "No invited candidates — send invites first"}
 
-    calendar = get_calendar_service()
+    try:
+        creds = get_user_credentials(req.user_email)
+        calendar = build("calendar", "v3", credentials=creds)
+    except Exception as e:
+        return {"error": f"Calendar auth failed: {e}"}
+
     booked = []
     failed = []
     slot_index = 0
@@ -96,6 +86,7 @@ def match_and_book(req: BookInterviewsRequest):
 
         event = {
             "summary": f"Interview – {candidate_name}",
+            "description": f"Interview for {app['job_id']}",
             "start": {"dateTime": start_dt.isoformat(), "timeZone": "Asia/Kolkata"},
             "end": {"dateTime": end_dt.isoformat(), "timeZone": "Asia/Kolkata"},
             "attendees": [
@@ -111,13 +102,11 @@ def match_and_book(req: BookInterviewsRequest):
                 sendUpdates="all"
             ).execute()
 
-            # Mark slot as booked
             supabase.table("interview_slots")\
                 .update({"is_booked": True})\
                 .eq("id", slot["id"])\
                 .execute()
 
-            # Create scheduled interview record
             supabase.table("scheduled_interviews").insert({
                 "application_id": app["id"],
                 "slot_id": slot["id"],
@@ -125,7 +114,6 @@ def match_and_book(req: BookInterviewsRequest):
                 "confirmation_sent": True
             }).execute()
 
-            # Update application stage
             supabase.table("applications")\
                 .update({"stage": "scheduled"})\
                 .eq("id", app["id"])\
@@ -150,5 +138,6 @@ def match_and_book(req: BookInterviewsRequest):
 def get_schedule(job_id: str):
     result = supabase.table("scheduled_interviews")\
         .select("*, applications(stage, candidates(name, email)), interview_slots(slot_datetime, interviewer_name)")\
+        .eq("applications.job_id", job_id)\
         .execute()
     return {"schedule": result.data}
