@@ -5,7 +5,9 @@ import tempfile
 import os
 import json
 import io
+import asyncio # this is for batching of the groq API requests, adding this soon
 from groq import Groq # groq's free tier llma 3.3 (70B parameters) has been used for comparing resumes
+from groq import AsyncGroq
 from database import supabase # supabase has been used for data management
 from dotenv import load_dotenv
 from pathlib import Path
@@ -13,7 +15,7 @@ import gspread
 from google.oauth2.service_account import Credentials as SACredentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import asyncio # this is for batching of the groq API requests, adding this soon
+
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -91,6 +93,42 @@ def get_google_creds():
         ]
     )
 
+async_groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
+
+async def screen_resume_async(candidate_name: str, resume_text: str, jd_text: str) -> dict:
+    system_prompt = """You are an expert HR screening assistant.
+Evaluate the resume against the job description and return ONLY valid JSON:
+{
+  "score": <0-100>,
+  "strengths": ["s1", "s2", "s3"],
+  "gaps": ["g1", "g2"],
+  "recommendation": "Strong Fit | Moderate Fit | Not Fit",
+  "reasoning": "one sentence summary"
+}
+Strong Fit >= 70 | Moderate Fit 40-69 | Not Fit < 40"""
+
+    try:
+        response = await async_groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"JD:\n{jd_text}\n\nCandidate: {candidate_name}\n\nResume:\n{resume_text}"}
+            ],
+            temperature=0.2,
+            max_tokens=600
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json.loads(raw.strip())
+    except Exception as e:
+        print(f"Groq error for {candidate_name}: {e}")
+        return {
+            "score": 0, "strengths": [], "gaps": ["Could not evaluate"],
+            "recommendation": "Not Fit", "reasoning": "Screening error."
+        }
 
 def parse_file_id(resume_url: str) -> str | None:
     if "/d/" in resume_url:
@@ -145,22 +183,25 @@ async def screen_resumes(
     jd_text: str = Form(...),
     resumes: List[UploadFile] = File(...)
 ):
-    results = []
-
+    # Extract all PDFs first
+    candidates = []
     for resume_file in resumes:
         file_bytes = await resume_file.read()
         resume_text = extract_text_from_pdf(file_bytes)
-
         if not resume_text:
-            print(f"Could not extract text from {resume_file.filename}")
             continue
-
         candidate_name = resume_file.filename.replace(".pdf", "").replace("_", " ").title()
         candidate_email = f"pending_{candidate_name.replace(' ', '_').lower()}@placeholder.com"
+        candidates.append((candidate_name, candidate_email, resume_text))
 
-        ai_result = screen_resume(candidate_name, resume_text, jd_text)
+    # Screen all concurrently
+    tasks = [screen_resume_async(name, text, jd_text) for name, email, text in candidates]
+    ai_results = await asyncio.gather(*tasks)
+
+    # Save to DB
+    results = []
+    for (candidate_name, candidate_email, _), ai_result in zip(candidates, ai_results):
         application = save_to_db(candidate_name, candidate_email, job_id, ai_result)
-
         results.append({
             "candidate_name": candidate_name,
             "application_id": application["id"],
@@ -172,7 +213,6 @@ async def screen_resumes(
         r["rank"] = i + 1
 
     return {"job_id": job_id, "total": len(results), "results": results}
-
 
 @router.post("/from-sheet")
 async def screen_from_sheet(job_id: str = Form(...), jd_text: str = Form(...)):
