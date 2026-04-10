@@ -56,3 +56,26 @@ def get_jobs_by_company(company_id: str):
         .order("created_at", desc=True)\
         .execute()
     return result.data
+
+@router.delete("/{job_id}/clear")
+def clear_job_screening(job_id: str):
+    # Delete scheduled interviews first (foreign key constraint)
+    app_ids = supabase.table("applications")\
+        .select("id")\
+        .eq("job_id", job_id)\
+        .execute()
+    
+    ids = [a["id"] for a in app_ids.data]
+    
+    if ids:
+        supabase.table("scheduled_interviews")\
+            .delete()\
+            .in_("application_id", ids)\
+            .execute()
+        
+        supabase.table("applications")\
+            .delete()\
+            .eq("job_id", job_id)\
+            .execute()
+
+    return {"cleared": len(ids)}

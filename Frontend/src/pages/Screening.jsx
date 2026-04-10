@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function Screening() {
   const { jobId } = useParams()
@@ -36,6 +36,16 @@ export default function Screening() {
       alert('Screening failed: ' + e.message)
     }
     setLoading(false)
+  }
+
+  async function clearAndRescreen() {
+    if (!confirm('This will delete all screening results for this job. Continue?')) return
+    try {
+        await axios.delete(`${API}/jobs/${jobId}/clear`)
+        setResults(null)
+    } catch (e) {
+        alert('Failed to clear: ' + e.message)
+    }
   }
 
   return (
@@ -116,6 +126,10 @@ export default function Screening() {
           {results.results.map((r, i) => (
             <CandidateCard key={i} candidate={r} />
           ))}
+
+          <button style={{ ...secondaryBtn, width: '100%', marginTop: 8 }} onClick={clearAndRescreen}>
+            ↺ Clear & Re-screen
+          </button> 
 
           <button style={{ ...primaryBtn, width: '100%', marginTop: 24 }}
             onClick={() => navigate(`/candidates/${jobId}`)}>

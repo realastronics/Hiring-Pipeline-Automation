@@ -9,6 +9,7 @@ import os
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = os.getenv("OAUTHLIB_INSECURE_TRANSPORT", "0")
 
+
 app = FastAPI(title="Hiring Tool API")
 app.include_router(screen.router)
 app.include_router(candidates.router)
@@ -22,6 +23,17 @@ app.add_middleware(
     allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],    
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "https://hiring-pipeline-automation.vercel.app",
+        "https://hiring-pipeline-automation-git-main-realastronics.vercel.app"
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/")
