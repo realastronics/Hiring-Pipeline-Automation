@@ -125,14 +125,14 @@ def save_to_db(candidate_name: str, candidate_email: str, job_id: str, ai_result
 
     candidate_id = candidate.data[0]["id"]
 
-    application = supabase.table("applications").insert({
+    application = supabase.table("applications").upsert({
         "job_id": job_id,
         "candidate_id": candidate_id,
         "fit_category": fit_map.get(ai_result["recommendation"], "not_fit"),
         "ai_score": ai_result["score"],
         "ai_reasoning": ai_result["reasoning"],
         "stage": "screened"
-    }).execute()
+        }, on_conflict="job_id,candidate_id").execute()
 
     return application.data[0]
 
