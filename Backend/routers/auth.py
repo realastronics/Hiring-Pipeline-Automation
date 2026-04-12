@@ -1,3 +1,5 @@
+import email
+
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from google.oauth2.credentials import Credentials
@@ -19,6 +21,7 @@ CLIENT_SECRET = None
 REDIRECT_URI = None
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 SCOPES = " ".join([
     "openid",
@@ -56,7 +59,7 @@ def login():
 def callback(request: Request):
     code = request.query_params.get("code")
     if not code:
-        return RedirectResponse("http://localhost:5173/login?error=no_code")
+        return RedirectResponse(f"{frontend_url}/login?error=no_code")
 
     env = get_env()
 
@@ -75,7 +78,7 @@ def callback(request: Request):
 
         if "error" in token_data:
             print(f"Token error: {token_data}")
-            return RedirectResponse("http://localhost:5173/login?error=token_failed")
+            return RedirectResponse(f"{frontend_url}/login?error=token_failed")
 
         access_token = token_data.get("access_token")
         refresh_token = token_data.get("refresh_token")
@@ -92,7 +95,7 @@ def callback(request: Request):
         name = user_info.get("name")
 
         if not email:
-            return RedirectResponse("http://localhost:5173/login?error=no_email")
+            return RedirectResponse(f"{frontend_url}/login?error=no_email")
 
         stored_token = {
             "token": access_token,
@@ -109,11 +112,11 @@ def callback(request: Request):
             "google_token": json.dumps(stored_token)
         }, on_conflict="email").execute()
 
-        return RedirectResponse(f"http://localhost:5173/dashboard?user={email}")
+        return RedirectResponse(f"{frontend_url}/dashboard?user={email}")
 
     except Exception as e:
         print(f"Auth callback error: {e}")
-        return RedirectResponse("http://localhost:5173/login?error=auth_failed")
+        return RedirectResponse(f"{frontend_url}/login?error=auth_failed")
 
 
 @router.get("/me")

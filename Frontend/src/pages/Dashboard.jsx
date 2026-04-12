@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -53,7 +54,7 @@ useEffect(() => {
 
       if (!cId) {
         if (!companyName) {
-          alert('Enter company name for your first job')
+          toast.error('Enter company name for your first job')
           setLoading(false)
           return
         }
@@ -73,7 +74,8 @@ useEffect(() => {
       setCreating(false)
       fetchJobs(cId)
     } catch (e) {
-      alert('Error: ' + e.message)
+      toast.error('Error: ' + e.message)
+
     }
     setLoading(false)
   }
@@ -182,5 +184,5 @@ function JobCard({ job, navigate }) {
 const cardStyle = { background: '#fff', borderRadius: 12, padding: 24, border: '1px solid #e8e8e8', marginBottom: 20 }
 const labelStyle = { display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#444' }
 const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #ddd', fontSize: 15, marginBottom: 16, outline: 'none', fontFamily: 'inherit' }
-const primaryBtn = { padding: '10px 20px', borderRadius: 8, background: '#1a1a1a', color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+const primaryBtn = { padding: '10px 20px', borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
 const secondaryBtn = { padding: '8px 14px', borderRadius: 8, background: '#f5f5f5', color: '#1a1a1a', border: '1px solid #e8e8e8', fontSize: 13, fontWeight: 500, cursor: 'pointer' }

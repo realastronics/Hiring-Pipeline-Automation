@@ -33,6 +33,7 @@ export default function Login() {
             borderRadius: 8,
             background: '#fff',
             border: '1px solid #ddd',
+            borderTop: '3px solid #2563eb',
             fontSize: 15,
             fontWeight: 600,
             cursor: 'pointer',

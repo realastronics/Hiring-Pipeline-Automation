@@ -15,3 +15,24 @@ Familiarity with Git
 Preferred
 Experience with any framework (React, Node.js, FastAPI, Django)
 Project work (GitHub/portfolio)
+
+Backend Engineer - Astronics
+
+Role Overview
+We are looking for a Backend Engineer to design, build, and maintain scalable server-side applications and APIs. You’ll work closely with frontend, product, and DevOps teams to deliver reliable and high-performance systems.
+
+Key Responsibilities
+
+Design and develop RESTful APIs and backend services
+Build scalable, secure, and high-performance systems
+Work with databases (SQL/NoSQL) and optimize queries
+Collaborate with cross-functional teams to define and ship features
+Write clean, maintainable, and testable code
+Debug, troubleshoot, and improve system performance
+
+Requirements
+
+Strong proficiency in at least one backend language (e.g., Python, Node.js, Java, Go)
+Experience with frameworks (e.g., Django, Express, Spring Boot)
+Solid understanding of databases (PostgreSQL, MongoDB, etc.)
+Familiarity with Git, REST APIs, and cloud platforms (AWS/GCP/Azure)
