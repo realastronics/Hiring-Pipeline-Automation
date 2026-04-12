@@ -49,7 +49,7 @@ The tool auto-detects column names — no hardcoding required.
 
 ---
 
-## Technical Deep Dive
+## Technical Aspect
 
 ### Architecture
 
