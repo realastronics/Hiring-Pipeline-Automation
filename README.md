@@ -41,7 +41,7 @@ Create a Google Form with these fields:
 
 Then:
 1. Link the form to a Google Sheet
-2. Share the Sheet with the service account email (provided on setup)
+2. Share the Sheet with the service account email (provided on setup) eg: hiring-bot-hehe@secure-answer-492122-r3.iam.gserviceaccount.com
 3. Share the Drive folder with the same service account email
 4. Paste the Sheet ID into the tool when screening
 
